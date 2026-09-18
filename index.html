@@ -1,563 +1,239 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+const express = require("express");
+const cors = require("cors");
 
-<title>VideoDown - Video Downloader</title>
+const app = express();
 
-<style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial,sans-serif;
-}
+app.use(cors());
+app.use(express.json());
 
-body{
-    background:#f5f7fb;
-    color:#172033;
-}
+/* =========================
+   HOME / API STATUS
+========================= */
 
-/* HEADER */
-header{
-    background:#ffffff;
-    padding:18px 6%;
-    border-bottom:1px solid #e5e7eb;
-}
+app.get("/", (req, res) => {
+    res.json({
+        status: "online",
+        service: "VideoDown API",
+        version: "1.0.0"
+    });
+});
 
-.navbar{
-    max-width:1100px;
-    margin:auto;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-}
 
-.logo{
-    font-size:26px;
-    font-weight:800;
-    color:#2563eb;
-}
+/* =========================
+   PLATFORM DETECTOR
+========================= */
 
-.language{
-    border:0;
-    background:#eef4ff;
-    color:#2563eb;
-    padding:10px 18px;
-    border-radius:8px;
-    font-weight:bold;
-}
+function detectPlatform(url) {
 
-/* HERO */
-.hero{
-    min-height:650px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:60px 20px;
-}
+    try {
 
-.hero-content{
-    width:100%;
-    max-width:850px;
-    text-align:center;
-}
+        const host = new URL(url)
+            .hostname
+            .toLowerCase()
+            .replace(/^www\./, "");
 
-.badge{
-    display:inline-block;
-    background:#eaf2ff;
-    color:#2563eb;
-    padding:9px 16px;
-    border-radius:30px;
-    font-size:14px;
-    font-weight:bold;
-    margin-bottom:22px;
-}
-
-h1{
-    font-size:52px;
-    line-height:1.1;
-    margin-bottom:18px;
-}
-
-h1 span{
-    color:#2563eb;
-}
-
-.subtitle{
-    max-width:650px;
-    margin:0 auto 35px;
-    color:#6b7280;
-    font-size:18px;
-    line-height:1.6;
-}
-
-/* URL BOX */
-.download-box{
-    max-width:780px;
-    margin:auto;
-    background:#ffffff;
-    padding:12px;
-    border:1px solid #e5e7eb;
-    border-radius:16px;
-    display:flex;
-    gap:10px;
-    box-shadow:0 12px 35px rgba(0,0,0,.08);
-}
-
-.download-box input{
-    flex:1;
-    border:0;
-    outline:0;
-    padding:16px;
-    font-size:16px;
-}
-
-.analyze-btn{
-    border:0;
-    background:#2563eb;
-    color:white;
-    padding:15px 25px;
-    border-radius:10px;
-    font-size:15px;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-.analyze-btn:hover{
-    background:#1d4ed8;
-}
-
-.analyze-btn:disabled{
-    opacity:.6;
-    cursor:not-allowed;
-}
-
-/* LOADING */
-#loading{
-    display:none;
-    margin:25px auto;
-    color:#2563eb;
-    font-weight:bold;
-}
-
-/* RESULT */
-#result{
-    display:none;
-    max-width:780px;
-    margin:25px auto 0;
-    background:#ffffff;
-    padding:25px;
-    border:1px solid #e5e7eb;
-    border-radius:15px;
-    text-align:left;
-}
-
-#result h3{
-    margin-bottom:10px;
-}
-
-.platform-name{
-    display:inline-block;
-    margin-top:12px;
-    background:#eef4ff;
-    color:#2563eb;
-    padding:9px 16px;
-    border-radius:20px;
-    font-weight:bold;
-}
-
-.success{
-    color:#16a34a;
-}
-
-.error{
-    color:#dc2626;
-}
-
-.info{
-    color:#6b7280;
-    margin-top:10px;
-    line-height:1.5;
-}
-
-/* FORMATS */
-.formats{
-    margin-top:20px;
-}
-
-.format{
-    background:#f5f7fb;
-    padding:13px;
-    margin-top:8px;
-    border-radius:8px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-}
-
-.download-btn{
-    border:0;
-    background:#2563eb;
-    color:white;
-    padding:8px 15px;
-    border-radius:7px;
-    cursor:pointer;
-    text-decoration:none;
-    display:inline-block;
-}
-
-/* SUPPORTED PLATFORMS */
-.supported{
-    margin-top:35px;
-}
-
-.supported-title{
-    color:#737d8d;
-    font-size:14px;
-    margin-bottom:15px;
-}
-
-.platforms{
-    display:flex;
-    justify-content:center;
-    gap:12px;
-    flex-wrap:wrap;
-}
-
-.platform{
-    background:#ffffff;
-    border:1px solid #e1e5ec;
-    padding:12px 20px;
-    border-radius:30px;
-    font-weight:600;
-}
-
-/* FEATURES */
-.features{
-    background:#ffffff;
-    padding:60px 20px;
-}
-
-.features-container{
-    max-width:1050px;
-    margin:auto;
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:20px;
-}
-
-.feature{
-    text-align:center;
-    padding:30px 20px;
-    border:1px solid #e5e7eb;
-    border-radius:14px;
-}
-
-.icon{
-    font-size:35px;
-    margin-bottom:15px;
-}
-
-.feature h3{
-    margin-bottom:10px;
-}
-
-.feature p{
-    color:#737d8d;
-    font-size:14px;
-    line-height:1.5;
-}
-
-/* FOOTER */
-footer{
-    background:#111827;
-    color:white;
-    text-align:center;
-    padding:30px 20px;
-}
-
-footer p{
-    color:#aeb7c7;
-    margin-top:8px;
-    font-size:13px;
-}
-
-/* MOBILE */
-@media(max-width:700px){
-    h1{
-        font-size:38px;
-    }
-
-    .subtitle{
-        font-size:16px;
-    }
-
-    .download-box{
-        flex-direction:column;
-    }
-
-    .download-box input{
-        width:100%;
-    }
-
-    .analyze-btn{
-        width:100%;
-    }
-
-    .features-container{
-        grid-template-columns:1fr;
-    }
-}
-</style>
-</head>
-
-<body>
-
-<!-- HEADER -->
-<header>
-    <div class="navbar">
-        <div class="logo">
-            VideoDown
-        </div>
-        <button class="language">
-            English
-        </button>
-    </div>
-</header>
-
-<!-- HERO -->
-<section class="hero">
-<div class="hero-content">
-
-    <div class="badge">
-        ⚡ Fast & Simple Video Downloader
-    </div>
-
-    <h1>
-        Download Videos
-        <span>Easy & Fast</span>
-    </h1>
-
-    <p class="subtitle">
-        Paste a public video URL from
-        YouTube, Facebook or Kuaishou
-        to check available download options.
-    </p>
-
-    <!-- URL INPUT -->
-    <div class="download-box">
-        <input
-            type="url"
-            id="videoUrl"
-            placeholder="Paste YouTube, Facebook or Kuaishou URL..."
-            autocomplete="off"
-        >
-        <button
-            class="analyze-btn"
-            id="analyzeBtn"
-            onclick="analyzeURL()">
-            Analyze Video
-        </button>
-    </div>
-
-    <!-- LOADING -->
-    <div id="loading">
-        ⏳ Checking video URL...
-    </div>
-
-    <!-- RESULT -->
-    <div id="result">
-        <h3 id="resultTitle"></h3>
-
-        <div class="platform-name" id="platformName"></div>
-
-        <p class="info" id="resultMessage"></p>
-
-        <!-- FORMAT AREA -->
-        <div class="formats" id="formats" style="display:none;">
-            <h3>Available Formats</h3>
-            <div id="formatList"></div>
-        </div>
-    </div>
-
-    <!-- SUPPORTED PLATFORMS -->
-    <div class="supported">
-        <p class="supported-title">
-            Supported Platforms
-        </p>
-
-        <div class="platforms">
-            <div class="platform">▶ YouTube</div>
-            <div class="platform">f Facebook</div>
-            <div class="platform">K Kuaishou</div>
-        </div>
-    </div>
-
-</div>
-</section>
-
-<!-- FEATURES -->
-<section class="features">
-<div class="features-container">
-    <div class="feature">
-        <div class="icon">🔗</div>
-        <h3>Easy to Use</h3>
-        <p>Paste a permitted public video URL and analyze it easily.</p>
-    </div>
-
-    <div class="feature">
-        <div class="icon">⚡</div>
-        <h3>Fast Processing</h3>
-        <p>Designed for fast processing of supported video sources.</p>
-    </div>
-
-    <div class="feature">
-        <div class="icon">📱</div>
-        <h3>Mobile Friendly</h3>
-        <p>Works smoothly on phones, tablets and computers.</p>
-    </div>
-</div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-    <strong>VideoDown</strong>
-    <p>Download only videos that you are authorized to download.</p>
-</footer>
-
-<script>
-/* PLATFORM DETECTOR */
-function detectPlatform(url){
-    try{
-        const parsedURL = new URL(url);
-        let host = parsedURL.hostname.toLowerCase().replace(/^www\./,"");
-
-        if(host === "youtube.com" || host === "m.youtube.com" || host === "youtu.be"){
+        if (
+            host === "youtube.com" ||
+            host === "m.youtube.com" ||
+            host === "youtu.be"
+        ) {
             return "YouTube";
         }
-        if(host === "facebook.com" || host === "m.facebook.com" || host === "fb.watch"){
+
+        if (
+            host === "facebook.com" ||
+            host === "m.facebook.com" ||
+            host === "fb.watch"
+        ) {
             return "Facebook";
         }
-        if(host === "kuaishou.com" || host === "kwai.com"){
+
+        if (
+            host === "kuaishou.com" ||
+            host === "kwai.com"
+        ) {
             return "Kuaishou";
         }
+
         return null;
-    }
-    catch(error){
+
+    } catch (error) {
+
         return null;
     }
 }
 
-/* ANALYZE URL WITH API */
-async function analyzeURL(){
-    const input = document.getElementById("videoUrl");
-    const button = document.getElementById("analyzeBtn");
-    const loading = document.getElementById("loading");
-    const result = document.getElementById("result");
-    const title = document.getElementById("resultTitle");
-    const platformName = document.getElementById("platformName");
-    const message = document.getElementById("resultMessage");
-    const formatsDiv = document.getElementById("formats");
-    const formatList = document.getElementById("formatList");
 
-    const url = input.value.trim();
+/* =========================
+   ANALYZE URL
+========================= */
 
-    if(!url){
-        showError("Please paste a video URL first.");
-        return;
+app.post("/api/analyze", (req, res) => {
+
+    const { url } = req.body;
+
+    if (!url) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Video URL is required"
+        });
     }
 
     const platform = detectPlatform(url);
 
-    if(!platform){
-        showError("Only YouTube, Facebook and Kuaishou URLs are supported.");
-        return;
-    }
+    if (!platform) {
 
-    result.style.display = "none";
-    loading.style.display = "block";
-    button.disabled = true;
-
-    try {
-        const response = await fetch("https://co.wuk.sh/api/json", {
-            method: "POST",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                url: url,
-                vQuality: "720"
-            })
+        return res.status(400).json({
+            success: false,
+            message: "Unsupported or invalid video URL"
         });
-
-        const data = await response.json();
-
-        loading.style.display = "none";
-        button.disabled = false;
-
-        if (data.status === "error" || !data.url) {
-            showError("Could not fetch video. Make sure the video is public.");
-            return;
-        }
-
-        result.style.display = "block";
-        title.innerHTML = "Video Ready! ✅";
-        title.className = "success";
-
-        platformName.innerText = platform;
-        platformName.style.color = "#2563eb";
-
-        message.innerText = "Click the download button below to download your video.";
-
-        formatList.innerHTML = `
-            <div class="format">
-                <span>MP4 — Best Quality</span>
-                <a href="${data.url}" target="_blank" rel="noopener noreferrer" class="download-btn">
-                    Download Video
-                </a>
-            </div>
-        `;
-        formatsDiv.style.display = "block";
-
-    } catch (error) {
-        loading.style.display = "none";
-        button.disabled = false;
-        showError("Failed to process request. Please try again later.");
     }
-}
 
-/* ERROR HANDLER */
-function showError(text){
-    const result = document.getElementById("result");
-    const title = document.getElementById("resultTitle");
-    const platform = document.getElementById("platformName");
-    const message = document.getElementById("resultMessage");
-    const formatsDiv = document.getElementById("formats");
-
-    result.style.display = "block";
-    formatsDiv.style.display = "none";
-    
-    title.innerHTML = "❌ URL Error";
-    title.className = "error";
-    
-    platform.innerText = "Unsupported / Error";
-    platform.style.color = "#dc2626";
-    
-    message.innerText = text;
-    
-    result.scrollIntoView({ behavior:"smooth" });
-}
-
-/* ENTER KEY SUPPORT */
-document.getElementById("videoUrl").addEventListener("keydown", function(event){
-    if(event.key === "Enter"){
-        analyzeURL();
-    }
+    res.json({
+        success: true,
+        platform: platform,
+        message: "Platform detected successfully."
+    });
 });
-</script>
 
-</body>
-</html>
+
+/* =========================
+   VIDEO INFO
+========================= */
+
+app.post("/api/video-info", (req, res) => {
+
+    const { url } = req.body;
+
+    if (!url) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Video URL is required"
+        });
+    }
+
+    const platform = detectPlatform(url);
+
+    if (!platform) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Unsupported or invalid video URL"
+        });
+    }
+
+    /*
+      এখানে ভবিষ্যতে বৈধ/public content
+      processing বা official API integration
+      যুক্ত করা হবে।
+    */
+
+    res.json({
+
+        success: true,
+
+        platform: platform,
+
+        status: "ready",
+
+        message:
+            "Video source detected. Authorized/public content processing can be connected here.",
+
+        availableQualities: [
+            "360p",
+            "480p",
+            "720p",
+            "1080p"
+        ]
+
+    });
+});
+
+
+/* =========================
+   DOWNLOAD STATUS
+========================= */
+
+app.post("/api/download", (req, res) => {
+
+    const { url, quality } = req.body;
+
+    if (!url) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Video URL is required"
+        });
+    }
+
+    const platform = detectPlatform(url);
+
+    if (!platform) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Unsupported or invalid video URL"
+        });
+    }
+
+    const allowedQualities = [
+        "360p",
+        "480p",
+        "720p",
+        "1080p"
+    ];
+
+    if (!allowedQualities.includes(quality)) {
+
+        return res.status(400).json({
+            success: false,
+            message: "Invalid video quality"
+        });
+    }
+
+    res.json({
+
+        success: true,
+
+        platform: platform,
+
+        quality: quality,
+
+        status: "pending",
+
+        message:
+            "Download processing endpoint is ready for an authorized/public content downloader implementation."
+
+    });
+});
+
+
+/* =========================
+   404 ERROR
+========================= */
+
+app.use((req, res) => {
+
+    res.status(404).json({
+        success: false,
+        message: "API endpoint not found"
+    });
+
+});
+
+
+/* =========================
+   START SERVER
+========================= */
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+
+    console.log(
+        `VideoDown API running on port ${PORT}`
+    );
+
+});
